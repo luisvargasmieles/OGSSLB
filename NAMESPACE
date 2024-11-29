@@ -1,0 +1,4 @@
+useDynLib(OGSSLB, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+importFrom("stats", "qchisq", "quantile", "rbeta", "rexp", "sd")
+exportPattern("^[[:alpha:]]+")
