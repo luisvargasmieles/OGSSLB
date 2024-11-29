@@ -76,9 +76,7 @@ OGSSLB <- function(Dis,
     }
   }
 
-  sourceCpp("functions/cOGSSLB.cpp")
-
-  res <- cOGSSLB(Dis, Y, B_init, sigmas_init, Tau_init, thetas_init, theta_tildes_init, 
+  res <- .cOGSSLB(Dis, Y, B_init, sigmas_init, Tau_init, thetas_init, theta_tildes_init, 
       nus_init, lambda1, lambda0s, lambda1_tilde, lambda0_tildes, weights, a, b, 
       a_tilde, b_tilde, alpha, d, eta, xi, sigma_min, IBP, EPSILON, MAX_ITER,
       plot_conv, iter_em_to_plot, dir_save_weight_grad, l2_reg_log_reg,
@@ -148,9 +146,6 @@ OGSSLB <- function(Dis,
   out$W <- W
   out$stepsize <- res$stepsize_logreg
   out$l2_reg_param <- res$lambda_l2_reg
-  # out$weights_progress <- res$weight_progress
-  # out$samples_progress <- res$samples_weight_progress
-  # out$l2_hyp_progress <- res$list_lambda_l2_progress
 
   return(out)
 }
