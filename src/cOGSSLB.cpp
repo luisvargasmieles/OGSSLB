@@ -791,7 +791,7 @@ vec M_step_nus_IBP(vec &Gamma_tilde_sum, mat &PQ, double alpha, double d, int N)
   return nus;
 }
 
-// [[Rcpp::export]]
+// [[Rcpp::export(.cOGSSLB)]]
 SEXP cOGSSLB(
   SEXP dis_SEXP,
   SEXP Y_SEXP, 
