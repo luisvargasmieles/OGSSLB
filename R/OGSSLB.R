@@ -1,4 +1,8 @@
 
+# This is a modification from the SSLB method from Gemma Moran's published R package
+# available at https://github.com/gemoran/SSLB, to adapt our outcome-guided proposed method
+# Reference: Moran, G. E., Rockova, V., & George, E. I. (2021). Spike-and-slab lasso biclustering.
+# The Annals of Applied Statistics, 15(1), 148-173. DOI: 10.1214/20-AOAS1385
 OGSSLB <- function(Dis,
                    Y,
                    K_init,

@@ -1,3 +1,15 @@
+/*
+ * This code is largely based on the SSLB (Spike-and-Slab Lasso Biclustering) R package
+ * developed by Gemma Moran et al., available at: https://github.com/gemoran/SSLB
+ *
+ * The following functions are new modifications to the original package:
+ * - E_step_Gamma_tilde_multi
+ * - MC_gradient_estimation  
+ * - M_step_Weights_multi
+ *
+ * Additional modifications were made to the main cOGSSLB function to support these changes.
+ */
+
 #include <RcppArmadillo.h>
 #include <math.h>
 // [[Rcpp::depends(RcppArmadillo)]]
