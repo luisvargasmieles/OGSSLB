@@ -252,9 +252,6 @@ List M_step_Weights_multi(mat &disease_output, mat &Gamma_tilde_iter, mat &Tau, 
   int n_samples = Tau.n_rows;
   int n_classes = disease_output.n_cols;
 
-  // I'm gonna save the Bernoulli samples here
-  umat gamma_tilde_samples;
-
   // Redefine the covariates matrix to include intersection
   mat gamma_tilde = zeros<mat>(n_samples, n_features + 1);
   gamma_tilde.col(0) = ones<vec>(n_samples);
