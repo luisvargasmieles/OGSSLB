@@ -246,7 +246,8 @@ List M_step_Weights_multi(mat &disease_output, mat &Gamma_tilde_iter, mat &Tau, 
                    int niter_burnIn_ULA_SOUL = 20, int niter_ULA_SOUL = 50,
                    int max_iters = 50, int max_iter_mc = 30, string dir_save_conv = "conv_data",
                    double init_l2_reg_log_reg = 0.5, double l2_reg_log_reg = 0.5, bool manual_set_stepsize_hyperparam_logreg = true,
-                   double perc_max_stepsize_grad_desc = 0.5, int iter_stepsize_l2_reg_est = 1){
+                   double perc_max_stepsize_grad_desc = 0.5, int iter_stepsize_l2_reg_est = 1,
+                   bool estimate_lambda_this_iter = true){
 
   int n_features = Tau.n_cols;
   int n_samples = Tau.n_rows;
@@ -341,78 +342,84 @@ List M_step_Weights_multi(mat &disease_output, mat &Gamma_tilde_iter, mat &Tau, 
     // change of variable to log-scale, as recommended in paper
     double eta_lambda_l2 = log(lambda_l2);
 
-    // burn-in stage
-    for (int i = 0; i < niter_burnIn_ULA_SOUL; i++) {
-      // MCMC sample (ULA algorithm)
-      mat perturb_term = sqrt(2 * stepsize) * randn(sample_weights.n_rows, sample_weights.n_cols);
-      if (sample_weights.n_cols > 1) {
-        sample_weights.col(n_classes - 1) = zeros<vec>(sample_weights.n_rows);
+    // Check if we should run the SOUL estimation this iteration
+    if (estimate_lambda_this_iter) {
+      // burn-in stage
+      for (int i = 0; i < niter_burnIn_ULA_SOUL; i++) {
+        // MCMC sample (ULA algorithm)
+        mat perturb_term = sqrt(2 * stepsize) * randn(sample_weights.n_rows, sample_weights.n_cols);
+        if (sample_weights.n_cols > 1) {
+          sample_weights.col(n_classes - 1) = zeros<vec>(sample_weights.n_rows);
+        }
+
+        // MC gradient estimation wihtout regularisation
+        grad_mc_sample = MC_gradient_estimation(gamma_tilde, Gamma_tilde_iter, sample_weights,
+                                                disease_output, n_samples, n_features,
+                                                n_classes, max_iter_mc);
+
+        // complete gradiente with regularisation
+        mat complete_grad = grad_mc_sample - (lambda_l2 * sample_weights);
+
+        // samples update
+        sample_weights += (stepsize * complete_grad) + perturb_term;
+
       }
 
-      // MC gradient estimation wihtout regularisation
-      grad_mc_sample = MC_gradient_estimation(gamma_tilde, Gamma_tilde_iter, sample_weights,
-                                              disease_output, n_samples, n_features,
-                                              n_classes, max_iter_mc);
+      // Sampling stage
+      for (int i = 0; i < niter_ULA_SOUL; i++) {
+        // MCMC sample (ULA algorithm)
+        mat perturb_term = sqrt(2 * stepsize) * randn(sample_weights.n_rows, sample_weights.n_cols);
+        if (sample_weights.n_cols > 1) {
+          sample_weights.col(n_classes - 1) = zeros<vec>(sample_weights.n_rows);
+        }
 
-      // complete gradiente with regularisation
-      mat complete_grad = grad_mc_sample - (lambda_l2 * sample_weights);
+        // MC gradient estimation wihtout regularisation
+        grad_mc_sample = MC_gradient_estimation(gamma_tilde, Gamma_tilde_iter, sample_weights,
+                                                disease_output, n_samples, n_features,
+                                                n_classes, max_iter_mc);
 
-      // samples update
-      sample_weights += (stepsize * complete_grad) + perturb_term;
+        // complete gradiente with regularisation
+        mat complete_grad = grad_mc_sample - (lambda_l2 * sample_weights);
 
-    }
+        // samples update
+        sample_weights += (stepsize * complete_grad) + perturb_term;
 
-    // Sampling stage
-    for (int i = 0; i < niter_ULA_SOUL; i++) {
-      // MCMC sample (ULA algorithm)
-      mat perturb_term = sqrt(2 * stepsize) * randn(sample_weights.n_rows, sample_weights.n_cols);
-      if (sample_weights.n_cols > 1) {
-        sample_weights.col(n_classes - 1) = zeros<vec>(sample_weights.n_rows);
+        // save progress of norm of samples
+        samples_weight_progress(i) = norm(sample_weights, "fro");
+
+        // estimate lambda_reg
+        step_size_lambda_est = C_0 * pow(iter_stepsize_l2_reg_est, -0.8);
+
+        // lambda update - log scale
+        eta_lambda_l2 += 0.5 * step_size_lambda_est * ((d_sapg / lambda_l2) - accu(pow(sample_weights, 2))) * exp(eta_lambda_l2);
+        // projection step
+        eta_lambda_l2 = min(max_eta_lambda_l2, max(eta_lambda_l2, min_eta_lambda_l2));
+        // lambda update - normal scale
+        lambda_l2 = exp(eta_lambda_l2);
+        // to save progress of the lambda estimate
+        list_lambda_l2(i) = lambda_l2;
+        // to save the last thresh_iter_lambda to compute the final estimation of lambda
+        if (i >= thresh_iter_lambda) {
+          mean_lambda_est += lambda_l2;
+        }
+        // update step-size
+        stepsize = perc_max_stepsize_grad_desc * 2 / (eig_max_value + lambda_l2);
+        // update stepsize iteration index
+        iter_stepsize_l2_reg_est++;
+      }
+      // save .csv file with lambda_l2 and sample_weight_norm progress, if flag_plot is true
+      if (flag_plot_conv) {
+        list_lambda_l2.save(dir_save_conv + "/lambda_l2_iter_" + to_string(n_lambda0_to_plot) + ".csv", csv_ascii);
+        samples_weight_progress.save(dir_save_conv + "/sample_weight_iter_" + to_string(n_lambda0_to_plot) + ".csv", csv_ascii);
       }
 
-      // MC gradient estimation wihtout regularisation
-      grad_mc_sample = MC_gradient_estimation(gamma_tilde, Gamma_tilde_iter, sample_weights,
-                                              disease_output, n_samples, n_features,
-                                              n_classes, max_iter_mc);
+      // Weights estimate step with lambda_reg estimated
+      // compute mean_lambda_est
+      mean_lambda_est = mean_lambda_est / (niter_ULA_SOUL - thresh_iter_lambda);
 
-      // complete gradiente with regularisation
-      mat complete_grad = grad_mc_sample - (lambda_l2 * sample_weights);
-
-      // samples update
-      sample_weights += (stepsize * complete_grad) + perturb_term;
-
-      // save progress of norm of samples
-      samples_weight_progress(i) = norm(sample_weights, "fro");
-
-      // estimate lambda_reg
-      step_size_lambda_est = C_0 * pow(iter_stepsize_l2_reg_est, -0.8);
-
-      // lambda update - log scale
-      eta_lambda_l2 += 0.5 * step_size_lambda_est * ((d_sapg / lambda_l2) - accu(pow(sample_weights, 2))) * exp(eta_lambda_l2);
-      // projection step
-      eta_lambda_l2 = min(max_eta_lambda_l2, max(eta_lambda_l2, min_eta_lambda_l2));
-      // lambda update - normal scale
-      lambda_l2 = exp(eta_lambda_l2);
-      // to save progress of the lambda estimate
-      list_lambda_l2(i) = lambda_l2;
-      // to save the last thresh_iter_lambda to compute the final estimation of lambda
-      if (i >= thresh_iter_lambda) {
-        mean_lambda_est += lambda_l2;
-      }
-      // update step-size
-      stepsize = perc_max_stepsize_grad_desc * 2 / (eig_max_value + lambda_l2);
-      // update stepsize iteration index
-      iter_stepsize_l2_reg_est++;
+    } else {
+      mean_lambda_est = l2_reg_log_reg;
     }
-    // save .csv file with lambda_l2 and sample_weight_norm progress, if flag_plot is true
-    if (flag_plot_conv) {
-      list_lambda_l2.save(dir_save_conv + "/lambda_l2_iter_" + to_string(n_lambda0_to_plot) + ".csv", csv_ascii);
-      samples_weight_progress.save(dir_save_conv + "/sample_weight_iter_" + to_string(n_lambda0_to_plot) + ".csv", csv_ascii);
-    }
-
-    // Weights estimate step with lambda_reg estimated
-    // compute mean_lambda_est
-    mean_lambda_est = mean_lambda_est / (niter_ULA_SOUL - thresh_iter_lambda);
 
     // update learning rate
     stepsize = perc_max_stepsize_grad_desc * 2 / (eig_max_value + mean_lambda_est);
@@ -838,7 +845,9 @@ SEXP cOGSSLB(
   SEXP niter_expgrad_graddesc_logreg_SEXP,
   SEXP niter_exp_y_SEXP,
   SEXP manual_set_stepsize_hyperparam_logreg_SEXP,
-  SEXP perc_max_stepsize_grad_desc_SEXP) {
+  SEXP perc_max_stepsize_grad_desc_SEXP,
+  SEXP use_thinning_SOUL_SEXP,
+  SEXP thinning_factor_SOUL_SEXP) {
 
   // Convert R objects to Armadillo objects
   // disease output vector of one/zeroes.
@@ -919,6 +928,8 @@ SEXP cOGSSLB(
   double perc_max_stepsize_grad_desc = as<double>(perc_max_stepsize_grad_desc_SEXP);
   int converged = 0;
   int iter_stepsize_l2_reg_est = 1;
+  bool use_thinning_SOUL = as<bool>(use_thinning_SOUL_SEXP);
+  int thinning_factor_SOUL = as<int>(thinning_factor_SOUL_SEXP);
 
   // To save results of M-step of Computation of Weights
   List M_weights_res;
@@ -1021,6 +1032,14 @@ SEXP cOGSSLB(
       // Update Tau
       Tau = M_step_Tau(X, Gamma_tilde, V_traces, lambda1_tilde, lambda0_tilde);
 
+      // Determine if the hyperparameter should be estimated this iteration
+      bool estimate_lambda_this_iter = true;
+      
+      if (use_thinning_SOUL) {
+          // Estimate on the first iteration and every m-th iteration
+          estimate_lambda_this_iter = (ITER == 1 || ITER % thinning_factor_SOUL == 0);
+      }
+
       // Update the weights
       // we add this step to the EM algorithm to compute the weights for the E_Gamma_tilde
       if (ITER == iter_em_to_plot) {
@@ -1029,14 +1048,14 @@ SEXP cOGSSLB(
                                        stepsize_graddesc_logreg, niter_burnIn_ULA_SOUL, niter_ULA_SOUL,
                                        niter_graddesc_logreg, niter_expgrad_graddesc_logreg, dir_save_weight_grad,
                                        init_l2_reg_log_reg, l2_reg_log_reg, manual_set_stepsize_hyperparam_logreg,
-                                       perc_max_stepsize_grad_desc, iter_stepsize_l2_reg_est);
+                                       perc_max_stepsize_grad_desc, iter_stepsize_l2_reg_est, estimate_lambda_this_iter);
       } else {
         M_weights_res = M_step_Weights_multi(dis, Gamma_tilde, Tau, theta_tildes, lambda1_tilde,
                                        lambda0_tilde, weights, sample_weights, false, l + 1,
                                        stepsize_graddesc_logreg, niter_burnIn_ULA_SOUL, niter_ULA_SOUL,
                                        niter_graddesc_logreg, niter_expgrad_graddesc_logreg, dir_save_weight_grad,
                                        init_l2_reg_log_reg, l2_reg_log_reg, manual_set_stepsize_hyperparam_logreg,
-                                       perc_max_stepsize_grad_desc, iter_stepsize_l2_reg_est);
+                                       perc_max_stepsize_grad_desc, iter_stepsize_l2_reg_est, estimate_lambda_this_iter);
       }
 
       weights = as<mat>(M_weights_res["weights"]);

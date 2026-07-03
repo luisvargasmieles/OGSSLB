@@ -31,6 +31,8 @@ OGSSLB <- function(Dis,
                    perc_max_stepsize_grad_desc = 0.475,
                    l2_reg_log_reg = 0.5,
                    stepsize_graddesc_logreg = 0.1,
+                   use_thinning_SOUL = FALSE,
+                   thinning_factor_SOUL = 5,
                    n_iter_burnIn_ULA_SOUL = 500,
                    n_iter_ULA_SOUL = 100,
                    niter_graddesc_logreg = 200,
@@ -86,7 +88,8 @@ OGSSLB <- function(Dis,
       plot_conv, iter_em_to_plot, dir_save_weight_grad, l2_reg_log_reg,
       stepsize_graddesc_logreg, n_iter_burnIn_ULA_SOUL, n_iter_ULA_SOUL,
       niter_graddesc_logreg, niter_expgrad_graddesc_logreg, niter_exp_y,
-      manual_set_stepsize_hyperparam_logreg, perc_max_stepsize_grad_desc)
+      manual_set_stepsize_hyperparam_logreg, perc_max_stepsize_grad_desc,
+      use_thinning_SOUL, thinning_factor_SOUL)
 
   X <- res$X
   Tau <- res$Tau
