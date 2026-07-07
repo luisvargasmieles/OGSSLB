@@ -20,7 +20,7 @@ Numerical experiments testing this package can be found at [OGSSLB-examples](htt
 
 To significantly accelerate execution on high-dimensional datasets, this version introduces **Hyperparameter Thinning** for the internal SOUL algorithm step. 
 
-Instead of running the computationally heavy ULA (Unadjusted Langevin Algorithm) loops to estimate the L2 regularization hyperparameter of the disease-bicluster classification model at every single EM iteration, thinning allows you to freeze and reuse the hyperparameter, running the SOUL optimization only every m-th iteration. Meanwhile, the underlying outcome guidance regression weights continue to optimize at every iteration, ensuring your clinical outcomes stay perfectly synchronized with the evolving biclusters without sacrificing algorithm stability.
+Instead of running the ULA (Unadjusted Langevin Algorithm) loops to estimate the L2 regularization hyperparameter of the disease-bicluster classification model at every single EM iteration, thinning allows you to freeze and reuse the hyperparameter, running the SOUL optimization only every m-th iteration. Meanwhile, the outcome guidance regression weights continue to optimize at every iteration, speeding up the bicluster estimation process.
 
 ### Example
 
@@ -39,5 +39,5 @@ results <- OGSSLB(
 
 ## References
 
-- Luis A. Vargas-Mieles, Paul D. W. Kirk, Chris Wallace "Outcome-guided spike-and-slab Lasso Biclustering: A Novel Approach for Enhancing Biclustering Techniques for Gene Expression Analysis," arXiv preprint arXiv:2412.08416.
-- Gemma E. Moran, Veronika Ročková, Edward I. George "Spike-and-slab Lasso biclustering," The Annals of Applied Statistics, Ann. Appl. Stat. 15(1), 148-173, (March 2021)
+- Luis A. Vargas-Mieles, Paul D. W. Kirk, Chris Wallace, "Outcome-guided spike-and-slab Lasso Biclustering: A Novel Approach for Enhancing Biclustering Techniques for Gene Expression Analysis." Stat Comput 35, 179 (2025). [doi.org/10.1007/s11222-025-10709-4](https://doi.org/10.1007/s11222-025-10709-4)
+- Gemma E. Moran, Veronika Ročková, Edward I. George, "Spike-and-slab Lasso biclustering." Ann. Appl. Stat. 15(1), 148-173, (March 2021). [doi.org/10.1214/20-AOAS1385](https://doi.org/10.1214/20-AOAS1385)
