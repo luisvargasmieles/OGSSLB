@@ -44,7 +44,7 @@
 #' the estimated sample bicluster membership matrix (\code{Gamma_tilde}), the estimated covariance matrix (\code{ML}), 
 #' the final number of biclusters (\code{K}), the initial gene loading matrix (\code{init_B}), 
 #' the estimated multinomial logistic regression weights (\code{W}), the optimisation step size, 
-#' the final \(\ell_2\) regularisation parameter, and convergence information.
+#' the final \\ell_2 regularisation parameter, and convergence information.
 OGSSLB <- function(Y,
                    X,
                    K_init,
