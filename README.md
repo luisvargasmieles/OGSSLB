@@ -29,8 +29,8 @@ library(OGSSLB)
 
 # Run OGSSLB with hyperparameter thinning enabled
 results <- OGSSLB(
-  X = X_matrix, 
-  Y = Y_matrix, 
+  Y = disease_per_sample_binary_indicator_matrix,
+  X = gene_expression_matrix,
   # ... other model parameters ...
   use_thinning_SOUL = TRUE,       # Toggle hyperparameter thinning scheduling
   thinning_factor_SOUL = 5        # Run the SOUL algorithm every 5 EM iterations
