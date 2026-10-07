@@ -1,10 +1,48 @@
-
 # This is a modification from the SSLB method from Gemma Moran's published R package
 # available at https://github.com/gemoran/SSLB, to adapt our outcome-guided proposed method
 # Reference: Moran, G. E., Rockova, V., & George, E. I. (2021). Spike-and-slab lasso biclustering.
 # The Annals of Applied Statistics, 15(1), 148-173. DOI: 10.1214/20-AOAS1385
-OGSSLB <- function(Dis,
-                   Y,
+# Extended for OG-SSLB: Vargas-Mieles, L. A., Kirk, P. D. W., & Wallace, C. (2025). 
+# Outcome-guided spike-and-slab Lasso Biclustering. Statistics and Computing, 35(179).
+
+#' Outcome-Guided Spike-and-Slab Lasso Biclustering (OG-SSLB)
+#'
+#' @param Y Matrix of outcome variables Y \\in \\{0, 1\\}^{N \\times C}, representing disease presence/absence.
+#' @param X Matrix of gene expression data X \\in R^{N \\times G}.
+#' @param K_init Initial overestimate of the number of biclusters (K^*).
+#' @param lambda1 Slab parameter (\\lambda_1) for the gene loading matrix \\Lambda.
+#' @param lambda0s Sequence of spike parameters (\\lambda_0) for the gene loading matrix \\Lambda.
+#' @param lambda1_tilde Slab parameter (\\tilde{\\lambda}_1) for the sample loading matrix Z.
+#' @param lambda0_tildes Sequence of spike parameters (\\tilde{\\lambda}_0) for the sample loading matrix Z.
+#' @param W Initial matrix of weights W \\in R^{(K+1) \\times C} for the multinomial logistic regression.
+#' @param IBP Indicator variable (1 or 0) for using the Indian Buffet Process prior.
+#' @param a Beta prior hyperparameter for the gene indicators \\Gamma.
+#' @param b Beta prior hyperparameter for the gene indicators \\Gamma.
+#' @param a_tilde Beta prior hyperparameter for the finite approximation of sample indicators \\tilde{\\Gamma}.
+#' @param b_tilde Beta prior hyperparameter for the finite approximation of sample indicators \\tilde{\\Gamma}.
+#' @param alpha_tilde IBP parameter (\\tilde{\\alpha}) for the sample indicators.
+#' @param d Pitman-Yor extension parameter (d \\in [0, 1)) for the sample indicators.
+#' @param zeta_w \\ell_2 regularization hyperparameter (\\zeta_w) for the multinomial logistic regression weights.
+#' @param EPSILON Convergence tolerance.
+#' @param MAX_ITER Maximum number of EM iterations.
+#' @param plot_conv Logical; whether to plot convergence progress.
+#' @param iter_em_to_plot Iteration interval for plotting convergence.
+#' @param dir_save_weight_grad Directory to save weights and gradients data if plot_conv = TRUE.
+#' @param manual_set_stepsize_hyperparam_logreg Logical; manually set step size for hyperparameter estimation.
+#' @param perc_max_stepsize_grad_desc Percentage scaling for maximum gradient descent step size.
+#' @param stepsize_graddesc_logreg Step size (\\delta_{AGD}) for Accelerated Gradient Descent.
+#' @param use_thinning_SOUL Logical; enable thinning for SOUL algorithm MCMC samples.
+#' @param thinning_factor_SOUL Thinning factor for SOUL MCMC sampling.
+#' @param n_iter_burnIn_ULA_SOUL Number of burn-in iterations (N_0) for Unadjusted Langevin Algorithm in SOUL.
+#' @param n_iter_ULA_SOUL Number of tracking iterations (n) for Unadjusted Langevin Algorithm in SOUL.
+#' @param niter_graddesc_logreg Number of AGD iterations for W maximization.
+#' @param niter_expgrad_graddesc_logreg Number of gradient evaluations per AGD iteration.
+#' @param niter_exp_y Number of Monte Carlo samples (M) to approximate expected indicator variables.
+#' 
+#' @return A list containing the estimated sample factors (Z), gene factors (Lambda), 
+#' sample bicluster memberships (Gamma_tilde), regression weights (W), the final K, and algorithmic metadata.
+OGSSLB <- function(Y,
+                   X,
                    K_init,
                    lambda1 = 1,
                    lambda0s = c(1, 5, 10, 50, 100, 500, 1000, 10000,
@@ -12,9 +50,9 @@ OGSSLB <- function(Dis,
                    lambda1_tilde = 1,
                    lambda0_tildes = c(1, rep(5, length(lambda0s) - 1)),
                    weights = matrix(
-                    0.01 * rnorm((K_init + 1) * ncol(Dis)),
+                    0.01 * rnorm((K_init + 1) * ncol(Y)),
                     nrow = K_init + 1,
-                    ncol = ncol(Dis)),
+                    ncol = ncol(Y)),
                    IBP = 1,
                    a = 1 / K_init,
                    b = 1,
@@ -39,17 +77,17 @@ OGSSLB <- function(Dis,
                    niter_expgrad_graddesc_logreg = 30,
                    niter_exp_y = 50) {
 
-  N <- nrow(Y)
-  G <- ncol(Y)
+  N <- nrow(X)
+  G <- ncol(X)
 
-  # check if there's only one disease (no HC) in the Dis variable
-  if (is.vector(Dis)) Dis <- matrix(Dis, ncol = 1)
+  # check if there's only one disease (no HC) in the Y variable
+  if (is.vector(Y)) Y <- matrix(Y, ncol = 1)
 
   if (missing(K_init)) {
     stop("Must provide initial value of K (K_init)")
   }
 
-  sigs <- apply(Y, 2, sd)
+  sigs <- apply(X, 2, sd)
 
   sigquant <- 0.5
   sigdf <- 3
@@ -82,7 +120,7 @@ OGSSLB <- function(Dis,
     }
   }
 
-  res <- .cOGSSLB(Dis, Y, B_init, sigmas_init, Tau_init, thetas_init, theta_tildes_init, 
+  res <- .cOGSSLB(Y, X, B_init, sigmas_init, Tau_init, thetas_init, theta_tildes_init, 
       nus_init, lambda1, lambda0s, lambda1_tilde, lambda0_tildes, weights, a, b, 
       a_tilde, b_tilde, alpha, d, eta, xi, sigma_min, IBP, EPSILON, MAX_ITER,
       plot_conv, iter_em_to_plot, dir_save_weight_grad, l2_reg_log_reg,
