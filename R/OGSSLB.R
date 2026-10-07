@@ -14,13 +14,13 @@
 #' @param lambda0s Sequence of spike parameters (\\lambda_0) for the gene loading matrix \\Lambda.
 #' @param lambda1_tilde Slab parameter (\\tilde{\\lambda}_1) for the sample loading matrix Z.
 #' @param lambda0_tildes Sequence of spike parameters (\\tilde{\\lambda}_0) for the sample loading matrix Z.
-#' @param W Initial matrix of weights W \\in R^{(K+1) \\times C} for the multinomial logistic regression.
+#' @param weights Initial matrix of weights W \\in R^{(K+1) \\times C} for the multinomial logistic regression.
 #' @param IBP Indicator variable (1 or 0) for using the Indian Buffet Process prior.
 #' @param a Beta prior hyperparameter for the gene indicators \\Gamma.
 #' @param b Beta prior hyperparameter for the gene indicators \\Gamma.
 #' @param a_tilde Beta prior hyperparameter for the finite approximation of sample indicators \\tilde{\\Gamma}.
 #' @param b_tilde Beta prior hyperparameter for the finite approximation of sample indicators \\tilde{\\Gamma}.
-#' @param alpha_tilde IBP parameter (\\tilde{\\alpha}) for the sample indicators.
+#' @param alpha IBP parameter (\\tilde{\\alpha}) for the sample indicators.
 #' @param d Pitman-Yor extension parameter (d \\in [0, 1)) for the sample indicators.
 #' @param zeta_w \\ell_2 regularization hyperparameter (\\zeta_w) for the multinomial logistic regression weights.
 #' @param EPSILON Convergence tolerance.
@@ -30,6 +30,7 @@
 #' @param dir_save_weight_grad Directory to save weights and gradients data if plot_conv = TRUE.
 #' @param manual_set_stepsize_hyperparam_logreg Logical; manually set step size for hyperparameter estimation.
 #' @param perc_max_stepsize_grad_desc Percentage scaling for maximum gradient descent step size.
+#' @param l2_reg_log_reg \\ell_2 regularization hyperparameter for the multinomial logistic regression weights.
 #' @param stepsize_graddesc_logreg Step size (\\delta_{AGD}) for Accelerated Gradient Descent.
 #' @param use_thinning_SOUL Logical; enable thinning for SOUL algorithm MCMC samples.
 #' @param thinning_factor_SOUL Thinning factor for SOUL MCMC sampling.
@@ -39,8 +40,11 @@
 #' @param niter_expgrad_graddesc_logreg Number of gradient evaluations per AGD iteration.
 #' @param niter_exp_y Number of Monte Carlo samples (M) to approximate expected indicator variables.
 #' 
-#' @return A list containing the estimated sample factors (Z), gene factors (Lambda), 
-#' sample bicluster memberships (Gamma_tilde), regression weights (W), the final K, and algorithmic metadata.
+#' @return A list containing the processed gene expression matrix (\code{X}), the estimated gene loading matrix (\code{B}), 
+#' the estimated sample bicluster membership matrix (\code{Gamma_tilde}), the estimated covariance matrix (\code{ML}), 
+#' the final number of biclusters (\code{K}), the initial gene loading matrix (\code{init_B}), 
+#' the estimated multinomial logistic regression weights (\code{W}), the optimisation step size, 
+#' the final \(\ell_2\) regularisation parameter, and convergence information.
 OGSSLB <- function(Y,
                    X,
                    K_init,
